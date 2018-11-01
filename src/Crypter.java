@@ -1,4 +1,8 @@
+import javafx.util.Pair;
+
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Crypter {
 
@@ -127,6 +131,111 @@ public class Crypter {
         newPosition += FIRST_UP_ELEMENT_NUMBER - 1;
 
         return (char) newPosition;
+    }
+
+    public void analyzeKasiski(final File file) {
+        final String text = readTextFromFileWithoutSpacesToString(file);
+        final List<LGramData> pairs = new ArrayList<>();
+
+        for (int l = 3; l < 5; l++) {
+            final LGramData lGramData = getLGramInfo(l, text);
+
+            pairs.add(lGramData);
+        }
+
+        //System.out.println(pairs.toString());
+
+        final List<Integer> nodes = new ArrayList<>();
+
+        for (int i = 0; i < pairs.size(); i++) {
+            final LGramData pair = pairs.get(i);
+
+            System.out.println(pair.getDistances().toString());
+
+            final int nod = findNOD(pair.getDistances());
+
+            if (!nodes.contains(nod)) {
+                nodes.add(nod);
+            }
+        }
+
+        System.out.println(nodes.toString());
+
+
+    }
+
+    private LGramData getLGramInfo(final int l, final String text) {
+        final LGramData data = new LGramData(l);
+
+        final List<Integer> distances = new ArrayList<>();
+        int frequency = 0;
+
+        for (int i = 0; i < text.length() - l; i++) {
+            final Pair<Integer, Integer> pair = findDistance(i, l, text);
+
+            if (pair.getKey() != Integer.MAX_VALUE) {
+                final int distance = pair.getKey();
+                frequency += pair.getValue();
+
+                distances.add(distance);
+            }
+        }
+
+        data.add(distances);
+        data.setFrequency(frequency);
+
+        System.out.println(frequency);
+        return data;
+    }
+
+    private Pair<Integer, Integer> findDistance(final int i, final int l, final String text) {
+        final StringBuilder builder = new StringBuilder(text);
+        int distance = Integer.MAX_VALUE;
+        int frequency = 0;
+
+        for (int j = i + l; j < text.length() - l; j++) {
+            if (builder.substring(i, i + l).equals(builder.substring(j, j + l))) {
+                distance = Math.min(distance, Math.abs(j - i));
+                frequency++;
+
+                break;
+            }
+        }
+
+        return new Pair<>(distance, frequency);
+    }
+
+    private int findNOD(final List<Integer> integers) {
+        final int min = findMin(integers);
+        int nod = -1;
+
+        for (int k = 1; k <= min; k++) {
+            if (isDivided(k, integers)) {
+                nod = k;
+            }
+        }
+
+        return nod;
+    }
+
+    private int findMin(final List<Integer> integers) {
+        int min = Integer.MAX_VALUE;
+
+        for (final Integer integer : integers) {
+            min = Math.min(min, integer);
+        }
+
+        return min;
+    }
+
+    private boolean isDivided(final int number, final List<Integer> integers) {
+        for (final int integer : integers) {
+            if (integer % number != 0) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
 
