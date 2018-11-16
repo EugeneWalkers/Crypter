@@ -2,6 +2,7 @@ import javafx.util.Pair;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class Crypter {
@@ -137,21 +138,20 @@ public class Crypter {
         final String text = readTextFromFileWithoutSpacesToString(file);
         final List<LGramData> pairs = new ArrayList<>();
 
-        for (int l = 3; l < 5; l++) {
-            final LGramData lGramData = getLGramInfo(l, text);
-
-            pairs.add(lGramData);
+        for (int l = 4; l < 7; l++) {
+            pairs.add(getLGramInfo(l, text));
         }
 
         //System.out.println(pairs.toString());
 
         final List<Integer> nodes = new ArrayList<>();
 
+        for (int i=0; i<pairs.size(); i++){
+            analyzeDistances(pairs.get(i).getDistances());
+        }
+
         for (int i = 0; i < pairs.size(); i++) {
             final LGramData pair = pairs.get(i);
-
-            System.out.println(pair.getDistances().toString());
-
             final int nod = findNOD(pair.getDistances());
 
             if (!nodes.contains(nod)) {
@@ -161,7 +161,26 @@ public class Crypter {
 
         System.out.println(nodes.toString());
 
+        final int nod = findNOD(nodes);
 
+        System.out.println("Длина ключа = " + nod);
+    }
+
+    private void analyzeDistances(final List<Integer> distances){
+        for (int i=0; i<distances.size(); i++){
+            if (distances.get(i) < 3){
+                distances.remove(i--);
+            }
+        }
+
+        Collections.sort(distances);
+
+        final List<Integer> subDistances = new ArrayList<>();
+        for (int i=distances.size()/2; i<distances.size(); i++){
+            subDistances.add(distances.get(i));
+        }
+        distances.clear();
+        distances.addAll(subDistances);
     }
 
     private LGramData getLGramInfo(final int l, final String text) {
@@ -184,7 +203,7 @@ public class Crypter {
         data.add(distances);
         data.setFrequency(frequency);
 
-        System.out.println(frequency);
+        //System.out.println(frequency);
         return data;
     }
 
@@ -196,6 +215,7 @@ public class Crypter {
         for (int j = i + l; j < text.length() - l; j++) {
             if (builder.substring(i, i + l).equals(builder.substring(j, j + l))) {
                 distance = Math.min(distance, Math.abs(j - i));
+                //System.out.println(distance + ":" + " i = " + i + "; j = " + j + "; text = " + builder.substring(i, i+l));
                 frequency++;
 
                 break;
@@ -205,10 +225,15 @@ public class Crypter {
         return new Pair<>(distance, frequency);
     }
 
+    private void delete1(final List<Integer> integers){
+        integers.remove(1);
+    }
+
     private int findNOD(final List<Integer> integers) {
         final int min = findMin(integers);
         int nod = -1;
 
+        delete1(integers);
         for (int k = 1; k <= min; k++) {
             if (isDivided(k, integers)) {
                 nod = k;
