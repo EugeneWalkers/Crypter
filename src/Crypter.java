@@ -11,6 +11,10 @@ public class Crypter {
     private static final int LAST_UP_ELEMENT_NUMBER = 90;
     private static final int NUMBER_OF_ELEMENTS = LAST_UP_ELEMENT_NUMBER - FIRST_UP_ELEMENT_NUMBER + 1;
 
+    private final double[] realFrequencies = {0.08167, 0.01492, 0.02782, 0.04253, 0.12702, 0.0228, 0.02015,
+            0.06094, 0.06966, 0.00153, 0.00772, 0.04025, 0.02406, 0.06749, 0.07507, 0.01929, 0.00095, 0.05987,
+            0.06327, 0.09056, 0.02758, 0.00978, 0.0236, 0.0015, 0.01974, 0.00074};
+
     private String readTextFromFileWithoutSpacesToString(final File file) {
         BufferedReader reader = null;
         StringBuilder temporary = new StringBuilder();
@@ -159,11 +163,14 @@ public class Crypter {
             }
         }
 
-        System.out.println(nodes.toString());
-
+        delete1(nodes);
         final int nod = findNOD(nodes);
 
         System.out.println("Длина ключа = " + nod);
+
+        final String key = findKey(nod, file);
+
+        System.out.println(key);
     }
 
     private void analyzeDistances(final List<Integer> distances){
@@ -226,14 +233,17 @@ public class Crypter {
     }
 
     private void delete1(final List<Integer> integers){
-        integers.remove(1);
+        for (int i=0; i<integers.size(); i++){
+            if (integers.get(i) == 1){
+                integers.remove(i);
+            }
+        }
     }
 
     private int findNOD(final List<Integer> integers) {
         final int min = findMin(integers);
         int nod = -1;
 
-        delete1(integers);
         for (int k = 1; k <= min; k++) {
             if (isDivided(k, integers)) {
                 nod = k;
@@ -262,5 +272,82 @@ public class Crypter {
 
         return true;
     }
+
+    String findKey(int keyLength, File file) {
+        final String text = readTextFromFileWithoutSpacesToString(file);
+        StringBuilder key = new StringBuilder();
+        ArrayList<StringBuilder> subtexts = new ArrayList<>(keyLength);
+        for (int i = 0; i < keyLength; i++) {
+            subtexts.add(new StringBuilder());
+            for (int j = i; j < text.length() - keyLength; j += keyLength) {
+                subtexts.get(i).append(text.charAt(j));
+            }
+//System.out.println(subtexts.get(i));
+        }
+
+        int lettersNumber = 26;
+        List<List<Double>> frequencies = new ArrayList<>(keyLength);
+        StringBuilder currentText;
+        for (int i = 0; i < keyLength; i++) {
+            frequencies.add(new ArrayList<>(lettersNumber));
+            currentText = subtexts.get(i);
+            for (int j = 0; j < lettersNumber; j++) {
+                char letterToCompare = (char) (j + FIRST_UP_ELEMENT_NUMBER);
+                frequencies.get(i).add(0d);
+                for (int k = 0; k < currentText.length(); k++) {
+                    if (currentText.charAt(k) == letterToCompare) {
+                        frequencies.get(i).set(j, frequencies.get(i).get(j) + 1);
+                    }
+                }
+                frequencies.get(i).set(j, frequencies.get(i).get(j) / currentText.length());
+            }
+        }
+
+        for (int i = 0; i < keyLength; i++) {
+            int shiftOrLetter = 24 - findShift(frequencies.get(i));
+//System.out.println(Character.valueOf((char) (shiftOrLetter + FIRST_UP_ELEMENT_NUMBER)));
+            key.append(Character.valueOf((char) (shiftOrLetter + FIRST_UP_ELEMENT_NUMBER)));
+        }
+
+        return key.toString();
+    }
+
+    private List<Double> cyclicRightShift(List<Double> frequencies, int k) {
+        List<Double> newFrequencies = new ArrayList<>();
+
+        for (int i = frequencies.size() - 1 - k; i < frequencies.size(); i++) {
+            newFrequencies.add(frequencies.get(i));
+        }
+
+        for (int i = 0; i < frequencies.size() - k; i++) {
+            newFrequencies.add(frequencies.get(i));
+        }
+
+        return newFrequencies;
+    }
+
+    private double pearson(List<Double> countedFrequencies) {
+        double result = 0;
+        for (int i = 0; i < realFrequencies.length; i++) {
+            result += (realFrequencies[i] - countedFrequencies.get(i)) * (realFrequencies[i] - countedFrequencies.get(i));
+        }
+        return result / (realFrequencies.length * realFrequencies.length);
+    }
+
+    private int findShift(List<Double> countedFrequencies) {
+        double minPearson = Integer.MAX_VALUE, curPearson;
+        int shift = 0;
+//System.out.println("minPearson = " + minPearson + "; shift = " + shift);
+        for (int i = 0; i < NUMBER_OF_ELEMENTS; i++) {
+            curPearson = pearson(cyclicRightShift(countedFrequencies, i));
+            if (minPearson > curPearson) {
+                minPearson = curPearson;
+                shift = i;
+//System.out.println("minPearson = " + minPearson + "; shift = " + shift);
+            }
+        }
+        return shift;
+    }
+
 }
 
